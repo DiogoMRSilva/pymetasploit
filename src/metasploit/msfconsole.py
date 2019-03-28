@@ -2,6 +2,7 @@
 
 from threading import Timer, Lock
 from msfrpc import ShellSession
+import time
 
 __author__ = 'Nadeem Douba'
 __copyright__ = 'Copyright 2012, PyMetasploit Project'
@@ -51,7 +52,7 @@ class MsfRpcConsole(object):
 
         self.lock = Lock()
         self.running = True
-        self._poller()
+        #self._poller()
 
     def _poller(self):
         self.lock.acquire()
@@ -74,6 +75,28 @@ class MsfRpcConsole(object):
                 else:
                     print d
         Timer(0.5, self._poller).start()
+
+    def read_data(self):
+        self.lock.acquire()
+        if not self.running:
+            return
+        d = self.console.read()
+        self.lock.release()
+        return d['data']
+
+    def read_data_until_execution_completed(self):
+        exec_completed = False
+
+        out = list()
+        while not exec_completed:
+            time.sleep(1)        
+            received_output = self.read_data()
+            lines = received_output.rstrip().split('\n')
+            for line in lines:
+                out.append(line)
+                if 'execution completed' in line:
+                    exec_completed = True
+        return out
 
     def execute(self, command):
         """
